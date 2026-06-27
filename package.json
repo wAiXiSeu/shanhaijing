@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "vitest",
     "test:run": "vitest run",
-    "seed": "npx tsx scripts/seed/run-all.ts"
+    "seed": "npx tsx --env-file=.env.local scripts/seed/run-all.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
