@@ -46,12 +46,17 @@ export type StoryWithCreature = Story & {
   creatures: { id: string; name: string; slug: string; summary: string | null; image_path: string | null; category_id: string | null } | null
 }
 
+// Shape must satisfy @supabase/postgrest-js GenericSchema
+// (Tables + Views + Functions, each Table carrying Relationships),
+// otherwise `from(table).insert/update` collapses to `never`.
 export type Database = {
   public: {
     Tables: {
-      categories: { Row: Category; Insert: Partial<Category>; Update: Partial<Category> }
-      creatures: { Row: Creature; Insert: Partial<Creature>; Update: Partial<Creature> }
-      stories: { Row: Story; Insert: Partial<Story>; Update: Partial<Story> }
+      categories: { Row: Category; Insert: Partial<Category>; Update: Partial<Category>; Relationships: [] }
+      creatures: { Row: Creature; Insert: Partial<Creature>; Update: Partial<Creature>; Relationships: [] }
+      stories: { Row: Story; Insert: Partial<Story>; Update: Partial<Story>; Relationships: [] }
     }
+    Views: Record<string, never>
+    Functions: Record<string, never>
   }
 }
