@@ -111,7 +111,7 @@ CREATE TABLE stories (
 |---|---|---|---|
 | 鸟类 | `block-lime` | `#dceeb1` | 天空、自然 |
 | 兽类 | `block-coral` | `#f3c9b6` | 大地、温暖 |
-| 鱼蛇类 | `block-mint` | `#c8e6cd` | 水、清凉 |
+| 鱼类/水生类 | `block-mint` | `#c8e6cd` | 水、清凉 |
 | 神灵/半神 | `block-navy` | `#1f1d3d` | 深邃、神圣 |
 | 异族/国度 | `block-cream` | `#f4ecd6` | 人间、古朴 |
 | 蛇/爬虫类 | `block-lilac` | `#c5b0f4` | 神秘、幽暗 |

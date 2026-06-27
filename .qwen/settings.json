@@ -1,0 +1,10 @@
+{
+  "skills": {
+    "disabled": [
+      "find-skills",
+      "qwenpaw-model-config",
+      "qwenpaw-public-deploy"
+    ]
+  },
+  "$version": 4
+}
