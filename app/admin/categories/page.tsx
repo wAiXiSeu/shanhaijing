@@ -15,6 +15,16 @@ const colorBlocks = [
   { label: 'Pink', value: 'block-pink' },
 ]
 
+const blockBgColors: Record<string, string> = {
+  'block-lime': 'bg-block-lime',
+  'block-coral': 'bg-block-coral',
+  'block-mint': 'bg-block-mint',
+  'block-navy': 'bg-block-navy',
+  'block-cream': 'bg-block-cream',
+  'block-lilac': 'bg-block-lilac',
+  'block-pink': 'bg-block-pink',
+}
+
 export default function CategoriesPage() {
   const supabase = createClient()
   const [categories, setCategories] = useState<Category[]>([])
@@ -82,7 +92,7 @@ export default function CategoriesPage() {
             {categories.map((c) => (
               <tr key={c.id} className="border-b border-hairline-soft">
                 <td className="px-lg py-sm text-body-sm">{c.name}</td>
-                <td className="px-lg py-sm"><div className={`inline-block w-6 h-6 rounded-sm ${c.color_block === 'block-navy' ? 'bg-block-navy' : `bg-${c.color_block}`}`} /></td>
+                <td className="px-lg py-sm"><div className={`inline-block w-6 h-6 rounded-sm ${blockBgColors[c.color_block] || 'bg-surface-soft'}`} /></td>
                 <td className="px-lg py-sm text-body-sm text-gray-500">{c.sort_order}</td>
                 <td className="px-lg py-sm">
                   <button onClick={() => handleEdit(c)} className="text-body-sm text-gray-700 hover:text-ink">编辑</button>

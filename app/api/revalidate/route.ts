@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
+import { createServerClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const secret = searchParams.get('secret')
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  if (secret !== process.env.REVALIDATE_SECRET) {
-    return NextResponse.json({ error: 'Invalid secret' }, { status: 401 })
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ revalidated: true, paths })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Revalidation failed' }, { status: 500 })
   }
 }

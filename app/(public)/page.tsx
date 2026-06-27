@@ -53,8 +53,8 @@ export default async function HomePage() {
 
       {/* Marquee Strip */}
       <div className="bg-inverse-canvas text-inverse-ink py-sm overflow-hidden">
-        <div className="flex gap-xl whitespace-nowrap text-body-sm font-mono uppercase tracking-wider">
-          {marqueeQuotes.map((quote, i) => (
+        <div className="flex gap-xl whitespace-nowrap text-body-sm font-mono uppercase tracking-wider animate-marquee">
+          {[...marqueeQuotes, ...marqueeQuotes].map((quote, i) => (
             <span key={i}>{quote} · </span>
           ))}
         </div>

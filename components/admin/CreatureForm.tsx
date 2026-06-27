@@ -65,7 +65,7 @@ export function CreatureForm({ creature, categories }: Props) {
     }
 
     // Trigger ISR revalidation
-    await fetch(`/api/revalidate?secret=${process.env.NEXT_PUBLIC_REVALIDATE_SECRET || ''}`, {
+    await fetch('/api/revalidate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ paths: ['/creatures', `/creatures/${data.slug}`, '/'] }),
@@ -85,7 +85,7 @@ export function CreatureForm({ creature, categories }: Props) {
       return
     }
 
-    await fetch(`/api/revalidate?secret=${process.env.NEXT_PUBLIC_REVALIDATE_SECRET || ''}`, {
+    await fetch('/api/revalidate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ paths: ['/creatures', '/'] }),

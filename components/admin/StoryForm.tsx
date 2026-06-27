@@ -55,7 +55,7 @@ export function StoryForm({ story, creatures }: Props) {
       return
     }
 
-    await fetch(`/api/revalidate?secret=${process.env.NEXT_PUBLIC_REVALIDATE_SECRET || ''}`, {
+    await fetch('/api/revalidate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ paths: ['/stories', `/stories/${data.slug}`, '/'] }),
@@ -72,7 +72,7 @@ export function StoryForm({ story, creatures }: Props) {
     const { error } = await supabase.from('stories').delete().eq('id', story!.id)
     if (error) { setError(error.message); return }
 
-    await fetch(`/api/revalidate?secret=${process.env.NEXT_PUBLIC_REVALIDATE_SECRET || ''}`, {
+    await fetch('/api/revalidate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ paths: ['/stories', '/'] }),
