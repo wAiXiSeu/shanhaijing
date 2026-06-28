@@ -9,7 +9,9 @@
   "$version": 4,
   "permissions": {
     "allow": [
-      "Skill(subagent-driven-development)"
+      "Skill(subagent-driven-development)",
+      "Skill(gh-cli)",
+      "Bash(gh *)"
     ]
   }
 }

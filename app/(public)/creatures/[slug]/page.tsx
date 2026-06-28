@@ -15,12 +15,13 @@ export default async function CreatureDetailPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
+  const decodedSlug = decodeURIComponent(slug)
   const supabase = await createServerClient()
 
   const { data: creature } = await supabase
     .from('creatures')
     .select('*, categories(*)')
-    .eq('slug', slug)
+    .eq('slug', decodedSlug)
     .eq('is_published', true)
     .single()
 

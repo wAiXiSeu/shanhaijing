@@ -13,12 +13,13 @@ export default async function StoryDetailPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
+  const decodedSlug = decodeURIComponent(slug)
   const supabase = await createServerClient()
 
   const { data: story } = await supabase
     .from('stories')
     .select('*, creatures(id, name, slug, summary, image_path, category_id)')
-    .eq('slug', slug)
+    .eq('slug', decodedSlug)
     .eq('is_published', true)
     .single()
 
