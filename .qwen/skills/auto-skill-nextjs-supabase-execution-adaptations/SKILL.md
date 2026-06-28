@@ -1,6 +1,6 @@
 ---
 name: nextjs-supabase-execution-adaptations
-description: Adapt Next.js + Supabase implementation plans when tooling versions and runtime constraints diverge from plan assumptions (Tailwind v4, Next.js 16, ISR conflicts, Docker env vars)
+description: Adapt Next.js + Supabase implementation plans when tooling versions and runtime constraints diverge from plan assumptions (Tailwind v4, Next.js 16, ISR conflicts, Docker env vars, admin role auth, revalidation path validation)
 source: auto-skill
 extracted_at: '2026-06-27T17:08:14.080Z'
 ---
@@ -205,6 +205,99 @@ Route groups `(public)` don't affect URL paths but allow different layouts.
 **Symptom:** TypeScript build fails on `supabase.from('table').order(...)` — the query is missing the `.select()` call.
 
 **Resolution:** Always chain `.select('*')` (or specific columns) before `.order()`, `.eq()`, `.single()` etc. This was a recurring bug in plan code — check every Supabase query.
+
+## 11. Admin role checks: session existence ≠ admin authorization
+
+**Symptom:** Admin routes and API endpoints only check `if (!user)` (session exists), but don't verify the user has an admin role. If Supabase has public sign-up enabled (the default), **anyone who creates an account can access the full admin panel** — CRUD operations, file uploads, cache revalidation.
+
+**Root cause:** Supabase Auth distinguishes "authenticated" from "authorized." A session proves identity, not privilege. The `proxy.ts` middleware and API routes must both enforce role-based access.
+
+**Resolution:** Three-part fix:
+
+### Part A: Create `profiles` table with admin flag
+
+```sql
+-- supabase/migrations/002_add_profiles.sql
+CREATE TABLE IF NOT EXISTS profiles (
+  id         UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  is_admin   BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- Users read own profile; admins read all
+CREATE POLICY "Users read own profile" ON profiles FOR SELECT TO authenticated USING (auth.uid() = id);
+CREATE POLICY "Admins read all profiles" ON profiles FOR SELECT TO authenticated USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true)
+);
+
+-- Auto-create profile on signup
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO profiles (id, is_admin) VALUES (NEW.id, false);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+```
+
+After migration, grant admin to your first user:
+```sql
+UPDATE profiles SET is_admin = true WHERE id = 'YOUR-USER-UUID';
+```
+
+### Part B: Middleware role check in `proxy.ts`
+
+```ts
+// After session check, before returning response:
+if (!isLoginPage && session) {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', session.user.id)
+    .single()
+
+  if (!profile?.is_admin) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
+}
+```
+
+### Part C: API route role check
+
+```ts
+// In API routes (e.g., /api/revalidate):
+const { data: profile } = await supabase
+  .from('profiles')
+  .select('is_admin')
+  .eq('id', user.id)
+  .single()
+
+if (!profile?.is_admin) {
+  return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+}
+```
+
+### Part D: Defense in depth — also disable public sign-up
+
+In Supabase Dashboard: Authentication > Providers > Email > uncheck "Enable signup." This is the single highest-impact config change — it prevents unauthorized accounts entirely.
+
+**Also validate revalidation paths:** The `/api/revalidate` endpoint should whitelist allowed path prefixes to prevent cache poisoning:
+```ts
+const ALLOWED_PATH_PREFIXES = ['/', '/creatures', '/stories']
+const paths: string[] = (body.paths || ['/']).filter((p: string) =>
+  ALLOWED_PATH_PREFIXES.some(prefix =>
+    p === prefix || p.startsWith(prefix + '/') || p.startsWith(prefix + '?')
+  )
+)
+```
+
+**Key lesson:** Defense in depth — check roles at middleware layer (UX redirect), API layer (403 response), AND Supabase config (disable public signup). Never rely on a single gate.
 
 ## 10. Parsing structured markdown for data seeding
 
