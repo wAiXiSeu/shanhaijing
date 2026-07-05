@@ -8,6 +8,11 @@ const nextConfig = {
         hostname: '*.supabase.co',
         pathname: '/storage/**',
       },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.opentrust.net',
+        pathname: '/storage/**',
+      },
     ],
   },
 };

@@ -1,6 +1,6 @@
 ---
 name: nextjs-supabase-execution-adaptations
-description: Adapt Next.js + Supabase implementation plans when tooling versions and runtime constraints diverge from plan assumptions (Tailwind v4, Next.js 16, ISR conflicts, Docker env vars, admin role auth, revalidation path validation)
+description: Adapt Next.js + Supabase implementation plans when tooling versions and runtime constraints diverge from plan assumptions (Tailwind v4, Next.js 16, ISR conflicts, Docker env vars, admin role auth, revalidation path validation, Storage key encoding, Google Fonts in Docker, Storage URL domains)
 source: auto-skill
 extracted_at: '2026-06-27T17:08:14.080Z'
 ---
@@ -312,3 +312,104 @@ const paths: string[] = (body.paths || ['/']).filter((p: string) =>
 7. Parse each block by scanning lines: headings (`### `), blockquotes (`> `), bold markers (`**`)
 
 **Test the parser independently** — write a unit test that verifies the count, first item name, and last item name before running the seed against a live database.
+
+## 12. Supabase Storage rejects non-ASCII characters in object keys
+
+**Symptom:** Uploading files to Supabase Storage fails with `Invalid key: creatures/烛龙.png`. The Supabase JS SDK rejects the upload before it even reaches the server.
+
+**Root cause:** Supabase Storage object keys must be ASCII-safe. Chinese, Japanese, Korean, and other non-ASCII characters in file paths cause `Invalid key` errors.
+
+**Resolution:** Use romanized (pinyin) or English names for storage paths. Maintain a mapping from display names to storage-safe names:
+
+```ts
+// Image filename → { DB slug (Chinese), storage name (pinyin) }
+const imageMap: Record<string, { slug: string; storageName: string }> = {
+  '烛龙图鉴.png': { slug: '烛龙', storageName: 'zhulong' },
+  '凤凰图鉴.png': { slug: '凤凰', storageName: 'fenghuang' },
+  '夔牛.png':     { slug: '夔',   storageName: 'kui' },
+  // ...
+}
+
+// Upload with ASCII-safe path
+const storagePath = `creatures/${storageName}.png`
+await supabase.storage.from(bucket).upload(storagePath, fileBuffer, {
+  contentType: 'image/png',
+  upsert: true,
+})
+```
+
+**Key lesson:** Database slugs can be Chinese (URL-encoded by Next.js), but Storage object keys must be ASCII. Keep a mapping table between the two.
+
+## 13. Docker build fails when Google Fonts is unreachable
+
+**Symptom:** `docker compose up --build` fails during `npm run build` with:
+```
+Failed to fetch `Inter` from Google Fonts.
+Failed to fetch `JetBrains Mono` from Google Fonts.
+```
+
+**Root cause:** `next/font/google` fetches font metadata from `fonts.googleapis.com` at build time. Docker build environments (especially behind firewalls or in air-gapped networks) may not have access to Google's servers.
+
+**Resolution:** Download font files locally and switch to `next/font/local`:
+
+1. Download fonts from GitHub releases (not Google Fonts direct download — it returns HTML):
+   ```bash
+   # Inter from GitHub
+   curl -L -o /tmp/Inter.zip "https://github.com/rsms/inter/releases/download/v4.0/Inter-4.0.zip"
+   # JetBrains Mono from GitHub
+   curl -L -o /tmp/JB.zip "https://github.com/JetBrains/JetBrainsMono/releases/download/v2.304/JetBrainsMono-2.304.zip"
+   ```
+
+2. Extract variable font files (woff2 for Inter, ttf for JetBrains Mono):
+   ```bash
+   mkdir -p fonts
+   cp /tmp/InterFont/web/InterVariable.woff2 fonts/
+   cp /tmp/JBFont/fonts/variable/JetBrainsMono\[wght\].ttf fonts/JetBrainsMono-Variable.ttf
+   ```
+
+3. Update `app/layout.tsx`:
+   ```ts
+   import localFont from "next/font/local"
+
+   const inter = localFont({
+     src: "../fonts/InterVariable.woff2",
+     variable: "--font-inter",
+     display: "swap",
+   })
+
+   const jetbrainsMono = localFont({
+     src: "../fonts/JetBrainsMono-Variable.ttf",
+     variable: "--font-jetbrains-mono",
+     display: "swap",
+   })
+   ```
+
+**Key lesson:** `next/font/google` requires internet at build time. For Docker or CI environments, always prefer `next/font/local` with committed font files. Variable font files (single file, all weights) keep bundle size minimal.
+
+## 14. Supabase Storage public URL domain may differ from `*.supabase.co`
+
+**Symptom:** Images uploaded to Supabase Storage don't render in `next/image`. The browser shows 400 errors for image optimization. The actual Storage URL domain is `*.supabase.opentrust.net` (or another custom domain), not `*.supabase.co`.
+
+**Root cause:** `next.config.js` `images.remotePatterns` only includes `*.supabase.co`, but some Supabase deployments (self-hosted, or regional instances) use different domains.
+
+**Resolution:** Check the actual public URL returned by `supabase.storage.from(bucket).getPublicUrl(path)` and add the domain to `remotePatterns`:
+
+```js
+// next.config.js
+images: {
+  remotePatterns: [
+    {
+      protocol: 'https',
+      hostname: '*.supabase.co',
+      pathname: '/storage/**',
+    },
+    {
+      protocol: 'https',
+      hostname: '*.supabase.opentrust.net',  // add your actual domain
+      pathname: '/storage/**',
+    },
+  ],
+},
+```
+
+**Key lesson:** Always verify the actual Storage URL domain by uploading a test file and checking `getPublicUrl()`. Don't assume it matches `*.supabase.co`.

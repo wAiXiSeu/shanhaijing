@@ -11,7 +11,8 @@
     "allow": [
       "Skill(subagent-driven-development)",
       "Skill(gh-cli)",
-      "Bash(gh *)"
+      "Bash(gh *)",
+      "Agent(Explore)"
     ]
   }
 }

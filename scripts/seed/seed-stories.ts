@@ -28,10 +28,14 @@ export async function seedStories() {
     const creatureId = creatureMap.get(creatureName) || null
 
     // Use the full content (including the "小朋友你知道吗？" section after ---)
+    // Strip the first-line title (# ...) from content to avoid duplicate heading
+    const lines = content.split('\n')
+    const bodyContent = lines[0]?.startsWith('# ') ? lines.slice(1).join('\n').trimStart() : content
+
     return {
       title,
       slug: creatureName, // Use creature name as slug
-      content,
+      content: bodyContent,
       creature_id: creatureId,
       image_path: null,
       is_published: true,

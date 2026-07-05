@@ -41,3 +41,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+reading
+
+# large assets (uploaded to Supabase Storage / served externally)
+/images
+/fonts
+/voice
