@@ -16,6 +16,11 @@ export function Footer() {
           <Link href="/about" className="hover:text-ink">关于</Link>
         </nav>
       </div>
+      <div className="max-w-[1280px] mx-auto mt-lg pt-lg border-t border-hairline text-center">
+        <p className="text-caption text-gray-400">
+          苏ICP备2026043420号-1
+        </p>
+      </div>
     </footer>
   )
 }
